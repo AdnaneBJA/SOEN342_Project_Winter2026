@@ -126,5 +126,76 @@ Multiple times per session, however this is the most frequently triggered use-ca
 
 <img width="475" height="488" alt="image" src="https://github.com/user-attachments/assets/32c7224d-e0b5-4c9c-8057-122311e86919" />
 
+---
+
+## Operation Contracts
+
+---
+
+**System Operation** : *createTask(title, description, priority, dueDate)*  
+**Contract CO1** : createTask  
+
+**Operation** : `createTask(title: String, description: String, priority: PriorityLevel, dueDate: LocalDate)`  
+**Cross References** : Use Case: Create Task  
+
+**Preconditions** :  
++ title is not empty  
++ priority is valid (LOW, MEDIUM, HIGH)  
+
+**Postconditions** :  
++ `Task` instance created  
++ `Task.title`, `Task.description`, `Task.priority`, and `Task.dueDate` set from parameters  
++ `Task.status` set to `open`  
++ `Task` added to system  
++ `ActivityEntry` created and associated to `Task`  
+
+---
+
+**System Operation** : *updateTask(taskId, title, description, priority, dueDate, status)*  
+**Contract CO2** : updateTask  
+
+**Operation** : `updateTask(taskId: UUID, title: String, description: String, priority: PriorityLevel, dueDate: LocalDate, status: TaskStatus)`  
+**Cross References** : Use Case: Update Task  
+
+**Preconditions** :  
++ Task with given `taskId` exists  
+
+**Postconditions** :  
++ Existing `Task` retrieved  
++ Provided attributes updated  
++ `ActivityEntry` created and associated to `Task`  
+
+---
+
+**System Operation** : *viewTasks(filterCriteria)*  
+**Contract CO3** : viewTasks  
+
+**Operation** : `viewTasks(filterCriteria: TaskFilter)`  
+**Cross References** : Use Case: View Tasks  
+
+**Preconditions** :  
++ None  
+
+**Postconditions** :  
++ Matching `Task` instances retrieved  
++ No system state modified  
+
+---
+
+**System Operation** : *viewTaskHistory(taskId)*  
+**Contract CO4** : viewTaskHistory  
+
+**Operation** : `viewTaskHistory(taskId: UUID)`  
+**Cross References** : Use Case: View Task History  
+
+**Preconditions** :  
++ Task with given `taskId` exists  
+
+**Postconditions** :  
++ Associated `ActivityEntry` instances retrieved  
++ No system state modified  
+
+---
+
 
 *Personal Task Management System — SOEN 342 W2026 — Iteration I*
