@@ -38,9 +38,12 @@ TaskName, Description, Subtask, Status, Priority, DueDate, ProjectName, ProjectD
 
 # Screenshots of application
 ### Application upon startup
-
+<img width="524" height="257" alt="image" src="https://github.com/user-attachments/assets/c8e44943-e8a1-482b-b2ee-c3491a92e19f" />
 
 ### Viewing all tasks
+<img width="744" height="429" alt="image" src="https://github.com/user-attachments/assets/76bb694c-fa54-4314-9b71-31f5a8978448" />
 
 
 ### Export to csv folder after exporting to CSV
+
+<img width="602" height="201" alt="image" src="https://github.com/user-attachments/assets/12390035-d4ec-4447-bca1-d247a5254965" />
