@@ -1,0 +1,308 @@
+package system;
+
+import models.*;
+
+import java.io.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class TaskManagementSystem {
+    private final List<Task> tasks;
+    private final List<Project> projects;
+
+    public TaskManagementSystem() {
+        this.tasks = new ArrayList<>();
+        this.projects = new ArrayList<>();
+    }
+
+    public List<Task> getTasks() { return tasks; }
+    public List<Project> getProjects() { return projects; }
+
+    // ── Search ──────────────────────────────────────────────
+
+    public List<Task> getAllTasks() {
+        List<Task> results = new ArrayList<>(tasks);
+        results.sort(Comparator.comparing(t -> t.getDueDate() != null ? t.getDueDate() : LocalDate.MAX));
+        return results;
+    }
+
+    public List<Task> searchTasks(String keyword, TaskStatus status,
+                                  LocalDate fromDate, LocalDate toDate,
+                                  String dayOfWeek) {
+        List<Task> results = new ArrayList<>(tasks);
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String kw = keyword.toLowerCase();
+            results = results.stream()
+                    .filter(t -> t.getTitle().toLowerCase().contains(kw)
+                            || t.getDescription().toLowerCase().contains(kw))
+                    .collect(Collectors.toList());
+        }
+
+        if (status != null) {
+            results = results.stream()
+                    .filter(t -> t.getStatus() == status)
+                    .collect(Collectors.toList());
+        } else {
+            results = results.stream()
+                    .filter(t -> t.getStatus() == TaskStatus.OPEN)
+                    .collect(Collectors.toList());
+        }
+
+        if (fromDate != null) {
+            results = results.stream()
+                    .filter(t -> t.getDueDate() != null && !t.getDueDate().isBefore(fromDate))
+                    .collect(Collectors.toList());
+        }
+
+        if (toDate != null) {
+            results = results.stream()
+                    .filter(t -> t.getDueDate() != null && !t.getDueDate().isAfter(toDate))
+                    .collect(Collectors.toList());
+        }
+
+        if (dayOfWeek != null && !dayOfWeek.isEmpty()) {
+            DayOfWeek dow = parseDayOfWeek(dayOfWeek);
+            if (dow != null) {
+                results = results.stream()
+                        .filter(t -> t.getDueDate() != null && t.getDueDate().getDayOfWeek() == dow)
+                        .collect(Collectors.toList());
+            }
+        }
+
+        results.sort(Comparator.comparing(t -> t.getDueDate() != null ? t.getDueDate() : LocalDate.MAX));
+        return results;
+    }
+
+    private DayOfWeek parseDayOfWeek(String s) {
+        try {
+            return DayOfWeek.valueOf(s.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    // ── CSV Export ──────────────────────────────────────────
+
+    public void exportToCsv(String filepath) throws IOException {
+        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(filepath)))) {
+            pw.println("TaskName,Description,Subtask,Status,Priority,DueDate,ProjectName,ProjectDescription,Collaborator,CollaboratorCategory");
+            for (Task task : tasks) {
+                if (task.getSubtasks().isEmpty()) {
+                    pw.println(buildCsvLine(task, null));
+                } else {
+                    for (Subtask st : task.getSubtasks()) {
+                        pw.println(buildCsvLine(task, st));
+                    }
+                }
+            }
+        }
+    }
+
+    private String buildCsvLine(Task task, Subtask subtask) {
+        String[] fields = new String[10];
+        fields[0] = escapeCsv(task.getTitle());
+        fields[1] = escapeCsv(task.getDescription());
+        fields[2] = subtask != null ? escapeCsv(subtask.getTitle()) : "";
+        fields[3] = subtask != null ? subtask.getStatus().getLabel() : task.getStatus().getLabel();
+        fields[4] = task.getPriority().name();
+        fields[5] = task.getDueDate() != null ? task.getDueDate().toString() : "";
+        fields[6] = task.getProject() != null ? escapeCsv(task.getProject().getName()) : "";
+        fields[7] = task.getProject() != null ? escapeCsv(task.getProject().getDescription()) : "";
+        fields[8] = (subtask != null && subtask.getCollaborator() != null) ? escapeCsv(subtask.getCollaborator().getName()) : "";
+        fields[9] = (subtask != null && subtask.getCollaborator() != null) ? subtask.getCollaborator().getCategory().getLabel() : "";
+        return String.join(",", fields);
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
+    // ── CSV Import ──────────────────────────────────────────
+
+    public int importFromCsv(String filepath) throws IOException {
+        int count = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(filepath))) {
+            String headerLine = br.readLine(); // skip header
+            if (headerLine == null) return 0;
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] fields = parseCsvLine(line);
+                if (fields.length < 10) continue;
+                processRow(fields);
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private String[] parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        boolean inQuotes = false;
+        StringBuilder current = new StringBuilder();
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        current.append('"');
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    current.append(c);
+                }
+            } else {
+                if (c == '"') {
+                    inQuotes = true;
+                } else if (c == ',') {
+                    fields.add(current.toString().trim());
+                    current = new StringBuilder();
+                } else {
+                    current.append(c);
+                }
+            }
+        }
+        fields.add(current.toString().trim());
+        return fields.toArray(new String[0]);
+    }
+
+    private void processRow(String[] fields) {
+        String taskName = fields[0];
+        String description = fields[1];
+        String subtaskName = fields[2];
+        String statusStr = fields[3];
+        String priorityStr = fields[4];
+        String dueDateStr = fields[5];
+        String projectName = fields[6];
+        String projectDesc = fields[7];
+        String collabName = fields[8];
+        String collabCatStr = fields[9];
+
+        if (taskName.isEmpty()) return;
+
+        TaskStatus status = TaskStatus.fromString(statusStr);
+        PriorityLevel priority;
+        try {
+            priority = PriorityLevel.valueOf(priorityStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            priority = PriorityLevel.MEDIUM;
+        }
+
+        LocalDate dueDate = null;
+        if (!dueDateStr.isEmpty()) {
+            try {
+                dueDate = LocalDate.parse(dueDateStr);
+            } catch (DateTimeParseException e) {
+                // skip invalid date
+            }
+        }
+
+        // Find or create project
+        Project project = null;
+        if (!projectName.isEmpty()) {
+            project = findOrCreateProject(projectName, projectDesc);
+        }
+
+        // Find or create task (unique by name + due date)
+        Task task = findTask(taskName, dueDate);
+        if (task == null) {
+            task = new Task(taskName, description, priority, dueDate, status);
+            if (project != null) {
+                task.assignProject(project);
+            }
+            tasks.add(task);
+        }
+
+        // Handle collaborator
+        Collaborator collaborator = null;
+        if (!collabName.isEmpty() && project != null) {
+            collaborator = project.findCollaborator(collabName);
+            if (collaborator == null) {
+                CollaboratorCategory cat = CollaboratorCategory.fromString(collabCatStr);
+                collaborator = new Collaborator(collabName, cat);
+                project.addCollaborator(collaborator);
+            }
+        }
+
+        // Handle subtask
+        if (!subtaskName.isEmpty()) {
+            boolean exists = task.getSubtasks().stream()
+                    .anyMatch(s -> s.getTitle().equalsIgnoreCase(subtaskName));
+            if (!exists) {
+                task.addSubtask(subtaskName, collaborator);
+            }
+        }
+    }
+
+    private Project findOrCreateProject(String name, String description) {
+        for (Project p : projects) {
+            if (p.getName().equalsIgnoreCase(name)) return p;
+        }
+        Project project = new Project(name, description);
+        projects.add(project);
+        return project;
+    }
+
+    private Task findTask(String title, LocalDate dueDate) {
+        for (Task t : tasks) {
+            if (t.getTitle().equalsIgnoreCase(title) && Objects.equals(t.getDueDate(), dueDate)) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    // ── Collaborator limit check ────────────────────────────
+
+    public int getOpenTasksForCollaborator(Collaborator collaborator) {
+        int count = 0;
+        for (Task task : tasks) {
+            for (Subtask st : task.getSubtasks()) {
+                if (st.getCollaborator() != null
+                        && st.getCollaborator().getName().equals(collaborator.getName())
+                        && st.getStatus() == TaskStatus.OPEN) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    public boolean canAssignToCollaborator(Collaborator collaborator) {
+        return getOpenTasksForCollaborator(collaborator) < collaborator.getCategory().getTaskLimit();
+    }
+
+    // ── Display ─────────────────────────────────────────────
+
+    public String formatTaskTable(List<Task> taskList) {
+        if (taskList.isEmpty()) return "No tasks found.";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%-30s %-12s %-10s %-12s %-20s%n", "Title", "Status", "Priority", "Due Date", "Project"));
+        sb.append("-".repeat(84)).append("\n");
+
+        for (Task t : taskList) {
+            String proj = t.getProject() != null ? t.getProject().getName() : "";
+            String dd = t.getDueDate() != null ? t.getDueDate().toString() : "";
+            sb.append(String.format("%-30s %-12s %-10s %-12s %-20s%n",
+                    t.getTitle(), t.getStatus().getLabel(), t.getPriority(), dd, proj));
+            for (Subtask st : t.getSubtasks()) {
+                String collab = st.getCollaborator() != null ? st.getCollaborator().getName() : "";
+                sb.append(String.format("  └─ %-26s %-12s %-10s %-12s %-20s%n",
+                        st.getTitle(), st.getStatus().getLabel(), "", "", collab));
+            }
+        }
+        return sb.toString();
+    }
+}
