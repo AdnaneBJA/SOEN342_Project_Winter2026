@@ -1,4 +1,5 @@
-D:\SOEN342_Project_Winter2026\poc\src\main\java\app\Main.java
+D:\SOEN342_Project_Winter2026\poc\src\main\java\gateway\ICalGateway.java
+D:\SOEN342_Project_Winter2026\poc\src\main\java\Main.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\ActivityEntry.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\Collaborator.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\CollaboratorCategory.java
@@ -9,4 +10,6 @@ D:\SOEN342_Project_Winter2026\poc\src\main\java\models\Subtask.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\Tag.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\Task.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\models\TaskStatus.java
+D:\SOEN342_Project_Winter2026\poc\src\main\java\persistence\DatabaseManager.java
+D:\SOEN342_Project_Winter2026\poc\src\main\java\persistence\TaskRepository.java
 D:\SOEN342_Project_Winter2026\poc\src\main\java\system\TaskManagementSystem.java
