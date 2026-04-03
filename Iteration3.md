@@ -4,26 +4,26 @@
 ## Formal Requirements in OCL
 
 ### A Task Cannot Have More Than 20 Sub-Tasks
-context Task
-inv MaxSubTasks:
-  self.subTasks -> size() <= 20
+context Task<br>
+inv MaxSubTasks:<br>
+  &emsp;self.subTasks -> size() <= 20
 
 ### The Number of Open Tasks Without a Due Date Should Not Exceed 50
-context TaskManagementSystem
-inv MaxOpenTasksWithoutDueDate:
-  self.tasks -> select(t | t.status = TaskStatus::OPEN and t.dueDate.oclIsUndefined()) -> size() <= 50
+context TaskManagementSystem<br>
+inv MaxOpenTasksWithoutDueDate:<br>
+  &emsp;self.tasks -> select(t | t.status = TaskStatus::OPEN and t.dueDate.oclIsUndefined()) -> size() <= 50
 
 ### The Limit for Open Tasks for Each Collaborator Category is a Positive Integer
-context CollaboratorCategory
-inv CategoryLimit:
-  self.limit > 0
-  and
-  (self.type = CategoryType::SENIOR implies self.limit = 2)
-  and
-  (self.type = CategoryType::INTERMEDIATE implies self.limit = 5)
-  and
-  (self.type = CategoryType::JUNIOR implies self.limit = 10)
+context CollaboratorCategory<br>
+inv CategoryLimit:<br>
+  &emsp;self.limit > 0<br>
+  &emsp;and<br>
+  &emsp;(self.type = CategoryType::SENIOR implies self.limit = 2)<br>
+  &emsp;and<br>
+  &emsp;(self.type = CategoryType::INTERMEDIATE implies self.limit = 5)<br>
+  &emsp;and<br>
+  &emsp;(self.type = CategoryType::JUNIOR implies self.limit = 10)<br>
 ### No Collaborator Must be Overloaded
-context Collaborator
-inv NotOverloaded:
-  self.assignedSubTasks -> select(subTask | subTask.status = TaskStatus::Open) -> size() <= self.category.limit
+context Collaborator<br>
+inv NotOverloaded:<br>
+  &emsp;self.assignedSubTasks -> select(subTask | subTask.status = TaskStatus::Open) -> size() <= self.category.limit
