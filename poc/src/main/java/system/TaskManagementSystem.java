@@ -8,14 +8,41 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
+import persistence.DatabaseManager;
+import persistence.TaskRepository;
 
 public class TaskManagementSystem {
     private final List<Task> tasks;
     private final List<Project> projects;
+    private final DatabaseManager dbManager;
+    private final TaskRepository repository;
 
     public TaskManagementSystem() {
         this.tasks = new ArrayList<>();
         this.projects = new ArrayList<>();
+        this.dbManager = DatabaseManager.getInstance();
+        this.repository = new TaskRepository(dbManager);
+        initializeDatabase();
+    }
+
+    private void initializeDatabase() {
+        try {
+            dbManager.initialize();
+            List<Project> loadedProjects = repository.loadAllProjects();
+            projects.addAll(loadedProjects);
+            List<Task> loadedTasks = repository.loadAllTasks(projects);
+            tasks.addAll(loadedTasks);
+        } catch (Exception e) {
+            System.err.println("Warning: Could not load from database. Starting fresh. (" + e.getMessage() + ")");
+        }
+    }
+
+    public void saveToDatabase() {
+        try {
+            repository.saveAll(tasks, projects);
+        } catch (Exception e) {
+            System.err.println("Error saving to database: " + e.getMessage());
+        }
     }
 
     public List<Task> getTasks() { return tasks; }
@@ -281,6 +308,60 @@ public class TaskManagementSystem {
 
     public boolean canAssignToCollaborator(Collaborator collaborator) {
         return getOpenTasksForCollaborator(collaborator) < collaborator.getCategory().getTaskLimit();
+    }
+
+    // ── Overloaded Collaborators ────────────────────────────
+
+    public List<Collaborator> getOverloadedCollaborators() {
+        List<Collaborator> overloaded = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        for (Project project : projects) {
+            for (Collaborator collaborator : project.getCollaborators()) {
+                if (seen.contains(collaborator.getName())) continue;
+                seen.add(collaborator.getName());
+
+                int openTasks = getOpenTasksForCollaborator(collaborator);
+                int limit = collaborator.getCategory().getTaskLimit();
+                if (openTasks > limit) {
+                    overloaded.add(collaborator);
+                }
+            }
+        }
+        return overloaded;
+    }
+
+    public String formatOverloadedCollaborators() {
+        List<Collaborator> overloaded = getOverloadedCollaborators();
+        if (overloaded.isEmpty()) return "No overloaded collaborators found.";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%-20s %-15s %-10s %-10s%n", "Name", "Category", "Open Tasks", "Limit"));
+        sb.append("-".repeat(55)).append("\n");
+
+        for (Collaborator c : overloaded) {
+            int openTasks = getOpenTasksForCollaborator(c);
+            sb.append(String.format("%-20s %-15s %-10d %-10d%n",
+                    c.getName(), c.getCategory().getLabel(),
+                    openTasks, c.getCategory().getTaskLimit()));
+        }
+        return sb.toString();
+    }
+
+    // ── Task Creation ───────────────────────────────────────
+
+    public Task createTask(String title, String description, PriorityLevel priority,
+                           LocalDate dueDate, String projectName) {
+        TaskStatus status = TaskStatus.OPEN;
+        Task task = new Task(title, description, priority, dueDate, status);
+
+        if (projectName != null && !projectName.isEmpty()) {
+            Project project = findOrCreateProject(projectName, "");
+            task.assignProject(project);
+        }
+
+        tasks.add(task);
+        return task;
     }
 
     // ── Display ─────────────────────────────────────────────
