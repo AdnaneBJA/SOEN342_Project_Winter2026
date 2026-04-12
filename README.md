@@ -16,17 +16,17 @@ subtasks, and collaborators from the command line, with SQLite persistence and i
 
 ---
 
-## Final Submission — Iteration IV
+## Final Submission - Iteration IV
 
-**Final artifacts** (Where to find the diagrams we worked on):
+**Final artifacts** (Where to find the artifacts we worked on):
 
-| Artifact | Location | Notes |
-|---|---|---|
-| Final code | `poc/src/main/java/` | Iteration IV code (persistence + iCal + overload + OCL) |
-| Final README | `README.md` | This file |
-| Iteration I artifacts (use case, domain model, SSDs, fully-dressed UC, operation contracts) | `archives/Iteration1.md` | |
-| Iteration II artifacts (updated use case, domain, SSDs, interaction diagrams, class diagram) | `archives/Iteration2.md` | |
-| Iteration III artifacts (updated use case, class diagram, iCal sequence diagram, OCL) | `archives/Iteration3.md` | |
+| Artifact | Location |
+|---|---|
+| Final code | `poc/src/main/java/` | 
+| Final README | `README.md` | 
+| Iteration I artifacts (use case, domain model, SSDs, fully-dressed UC, operation contracts) | `archives/Iteration1.md` | 
+| Iteration II artifacts (updated use case, domain, SSDs, interaction diagrams, class diagram) | `archives/Iteration2.md` | 
+| Iteration III artifacts (updated use case, class diagram, iCal sequence diagram, OCL) | `archives/Iteration3.md` | 
 
 ---
 
