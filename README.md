@@ -18,35 +18,25 @@ subtasks, and collaborators from the command line, with SQLite persistence and i
 
 ## Final Submission — Iteration IV
 
-This repository contains the **final, submission-ready** version of the project.
-
-**Final artifacts** (read these first):
+**Final artifacts** (Where to find the diagrams we worked on):
 
 | Artifact | Location | Notes |
 |---|---|---|
 | Final code | `poc/src/main/java/` | Iteration IV code (persistence + iCal + overload + OCL) |
 | Final README | `README.md` | This file |
-| Final PlantUML diagrams (state machine, data model, class, domain, use-case, sequence, SSDs) | `plantuml.md` | **Canonical** text sources for all final diagrams |
 | Iteration I artifacts (use case, domain model, SSDs, fully-dressed UC, operation contracts) | `archives/Iteration1.md` | |
 | Iteration II artifacts (updated use case, domain, SSDs, interaction diagrams, class diagram) | `archives/Iteration2.md` | |
 | Iteration III artifacts (updated use case, class diagram, iCal sequence diagram, OCL) | `archives/Iteration3.md` | |
-| Task **Protocol State Machine** (Iteration IV — new) | `plantuml.md` §1 | |
-| **Data Model in UML** (Iteration IV — new) | `plantuml.md` §2 | Matches the SQLite schema |
-| Demo video | *TO BE ADDED BEFORE SUBMISSION* — see “Demo Video” below | |
-| Iteration requirement specs | `Sprint1.md`, `Sprint2.md`, `Sprint3.md`, `Sprint4.md` | Original assignment descriptions |
-
-> The **final versions** of diagrams are the PlantUML sources in `plantuml.md`.
-> The iteration-specific `.md` files are kept for historical traceability.
 
 ---
 
 ## Features
 
-### Iteration I — Core
+### Iteration I - Core
 - Create, update, view, search, and tag tasks
 - Subtasks, projects, activity history
 
-### Iteration II — PoC additions
+### Iteration II - PoC additions
 1. **View All Tasks** — display every task sorted by due date
 2. **Search Tasks** — filter by keyword, status, date range, or day of week
 3. **Import from CSV** — load tasks from a CSV file (`poc/sample_import.csv` included)
@@ -56,7 +46,7 @@ This repository contains the **final, submission-ready** version of the project.
 7. **Collaborator assignment** automatically creates a linked subtask
 8. **OCL enforcement at runtime** — `Task.addSubtask` rejects a 21st subtask (OCL `MaxSubTasks`)
 
-### Iteration III — Integration & persistence
+### Iteration III - Integration & persistence
 7. **Create Task** interactively (title, description, priority, due date, optional project)
 8. **Export to iCal (.ics)** — via `ICalGateway` (Gateway pattern), with four options:
    - single task, project tasks, open tasks due this week, all tasks with due dates
@@ -70,7 +60,7 @@ This repository contains the **final, submission-ready** version of the project.
     - Positive task limit per collaborator category (SENIOR=2, INTERMEDIATE=5, JUNIOR=10)
     - No collaborator may be overloaded
 
-### Iteration IV — Finalization
+### Iteration IV - Finalization
 12. **Protocol state machine for `Task`** — `plantuml.md` §1
 13. **Data model in UML** — `plantuml.md` §2
 14. Final consolidated PlantUML sources for all required diagrams
@@ -89,22 +79,6 @@ mvn compile exec:java
 
 The application creates a `taskmanager.db` SQLite database file in the `poc/` directory on
 first run. Data persists across sessions and is saved on every create/import and on exit.
-
-### Menu
-
-```
-1. Create Task
-2. Create Recurring Task
-3. View All Tasks
-4. Search Tasks (with filters)
-5. Import Tasks from CSV
-6. Export Tasks to CSV   (all OR last search results)
-7. Export Tasks to iCal (.ics)
-8. View Overloaded Collaborators
-9. Save & Exit
-```
-
----
 
 ## CSV Format
 
@@ -157,17 +131,17 @@ import is re-used for later rows referencing the same name.
 
 ---
 
-
-## Demo Video
-- link: *(https://www.youtube.com/watch?v=XQerkwIhzf0)*
-
 ---
 
 ## Design Patterns Used
 
-- **Gateway** — `gateway/ICalGateway.java` (isolates the domain from iCal format details)
-- **Singleton** — `persistence/DatabaseManager.java`
-- **Repository** — `persistence/TaskRepository.java`
+- **Gateway** : `gateway/ICalGateway.java` (isolates the domain from iCal format details)
+- **Singleton** : `persistence/DatabaseManager.java`
+- **Repository** : `persistence/TaskRepository.java`
 
 ---
+
+## Demo Video
+- link: *(https://www.youtube.com/watch?v=XQerkwIhzf0)*
+
 
