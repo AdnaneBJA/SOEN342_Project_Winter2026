@@ -1,4 +1,5 @@
 models\Tag.class
+system\TaskManagementSystem$1.class
 models\PriorityLevel.class
 models\TaskStatus.class
 persistence\TaskRepository.class

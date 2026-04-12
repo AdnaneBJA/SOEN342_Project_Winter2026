@@ -1,16 +1,19 @@
 import gateway.ICalGateway;
 import models.PriorityLevel;
+import models.RecurrencePattern;
 import models.Task;
 import models.TaskStatus;
 import system.TaskManagementSystem;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -19,6 +22,9 @@ public class Main {
     private static final Scanner scanner = new Scanner(System.in);
     private static final TaskManagementSystem system = new TaskManagementSystem();
     private static final ICalGateway icalGateway = new ICalGateway();
+
+    /** Last search result — used by "Export search results to CSV". */
+    private static List<Task> lastSearchResults = new ArrayList<>();
 
     public static void main(String[] args) {
         System.out.println("Personal Task Management System");
@@ -31,13 +37,14 @@ public class Main {
 
             switch (choice) {
                 case "1" -> createTask();
-                case "2" -> viewAllTasks();
-                case "3" -> searchTasks();
-                case "4" -> importCsv();
-                case "5" -> exportCsv();
-                case "6" -> exportIcal();
-                case "7" -> viewOverloadedCollaborators();
-                case "8" -> {
+                case "2" -> createRecurringTask();
+                case "3" -> viewAllTasks();
+                case "4" -> searchTasks();
+                case "5" -> importCsv();
+                case "6" -> exportCsv();
+                case "7" -> exportIcal();
+                case "8" -> viewOverloadedCollaborators();
+                case "9" -> {
                     system.saveToDatabase();
                     System.out.println("Data saved. Goodbye!");
                     running = false;
@@ -52,13 +59,14 @@ public class Main {
         System.out.println("|   Personal Task Management System             |");
         System.out.println("+-----------------------------------------------+");
         System.out.println("|  1. Create Task                               |");
-        System.out.println("|  2. View All Tasks                            |");
-        System.out.println("|  3. Search Tasks (with filters)               |");
-        System.out.println("|  4. Import Tasks from CSV                     |");
-        System.out.println("|  5. Export Tasks to CSV                       |");
-        System.out.println("|  6. Export Tasks to iCal (.ics)               |");
-        System.out.println("|  7. View Overloaded Collaborators             |");
-        System.out.println("|  8. Save & Exit                               |");
+        System.out.println("|  2. Create Recurring Task                     |");
+        System.out.println("|  3. View All Tasks                            |");
+        System.out.println("|  4. Search Tasks (with filters)               |");
+        System.out.println("|  5. Import Tasks from CSV                     |");
+        System.out.println("|  6. Export Tasks to CSV                       |");
+        System.out.println("|  7. Export Tasks to iCal (.ics)               |");
+        System.out.println("|  8. View Overloaded Collaborators             |");
+        System.out.println("|  9. Save & Exit                               |");
         System.out.println("+-----------------------------------------------+");
         System.out.print("Select an option: ");
     }
@@ -99,7 +107,117 @@ public class Main {
         System.out.println("  Task created: " + task.getTitle());
     }
 
-    // ── 2. View All Tasks ───────────────────────────────────
+    // ── 2. Create Recurring Task ────────────────────────────
+
+    private static void createRecurringTask() {
+        System.out.println("\n-- Create Recurring Task --\n");
+
+        System.out.print("  Title: ");
+        String title = scanner.nextLine().trim();
+        if (title.isEmpty()) {
+            System.out.println("  Error: Task title cannot be empty.");
+            return;
+        }
+
+        System.out.print("  Description: ");
+        String description = scanner.nextLine().trim();
+
+        System.out.print("  Priority (LOW/MEDIUM/HIGH) [default: MEDIUM]: ");
+        String priorityStr = scanner.nextLine().trim();
+        PriorityLevel priority;
+        try {
+            priority = priorityStr.isEmpty() ? PriorityLevel.MEDIUM : PriorityLevel.valueOf(priorityStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.out.println("  Invalid priority. Using MEDIUM.");
+            priority = PriorityLevel.MEDIUM;
+        }
+
+        System.out.print("  Project name [optional]: ");
+        String projectName = scanner.nextLine().trim();
+
+        System.out.print("  Recurrence type (DAILY/WEEKLY/MONTHLY): ");
+        String typeStr = scanner.nextLine().trim().toUpperCase();
+        RecurrencePattern.RecurrenceType type;
+        try {
+            type = RecurrencePattern.RecurrenceType.valueOf(typeStr);
+        } catch (IllegalArgumentException e) {
+            System.out.println("  Invalid recurrence type.");
+            return;
+        }
+
+        System.out.print("  Interval (positive integer, e.g. 1 for every day/week/month): ");
+        int interval;
+        try {
+            interval = Integer.parseInt(scanner.nextLine().trim());
+            if (interval < 1) interval = 1;
+        } catch (NumberFormatException e) {
+            interval = 1;
+        }
+
+        System.out.print("  Start date (YYYY-MM-DD): ");
+        LocalDate startDate = readDate();
+        if (startDate == null) {
+            System.out.println("  Error: start date is required.");
+            return;
+        }
+
+        System.out.print("  End date (YYYY-MM-DD): ");
+        LocalDate endDate = readDate();
+        if (endDate == null) {
+            System.out.println("  Error: end date is required.");
+            return;
+        }
+        if (endDate.isBefore(startDate)) {
+            System.out.println("  Error: end date must be on or after start date.");
+            return;
+        }
+
+        List<DayOfWeek> weekdays = null;
+        Integer dayOfMonth = null;
+
+        if (type == RecurrencePattern.RecurrenceType.WEEKLY) {
+            System.out.print("  Weekdays (comma-separated, e.g. MONDAY,WEDNESDAY) [optional]: ");
+            String wdStr = scanner.nextLine().trim();
+            if (!wdStr.isEmpty()) {
+                weekdays = new ArrayList<>();
+                for (String w : wdStr.split(",")) {
+                    try {
+                        weekdays.add(DayOfWeek.valueOf(w.trim().toUpperCase()));
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("  Ignoring invalid weekday: " + w.trim());
+                    }
+                }
+                if (weekdays.isEmpty()) weekdays = null;
+            }
+        } else if (type == RecurrencePattern.RecurrenceType.MONTHLY) {
+            System.out.print("  Day of month (1-31) [blank = use start-date day]: ");
+            String domStr = scanner.nextLine().trim();
+            if (!domStr.isEmpty()) {
+                try {
+                    int d = Integer.parseInt(domStr);
+                    if (d >= 1 && d <= 31) dayOfMonth = d;
+                } catch (NumberFormatException e) {
+                    System.out.println("  Invalid day of month, using start-date day.");
+                }
+            }
+        }
+
+        RecurrencePattern pattern = new RecurrencePattern(
+                type, weekdays, dayOfMonth, startDate, endDate, interval);
+
+        List<Task> occurrences = system.createRecurringTask(
+                title, description, priority, projectName, pattern);
+
+        if (occurrences.isEmpty()) {
+            System.out.println("  No occurrences generated (check dates and weekdays).");
+            return;
+        }
+
+        system.saveToDatabase();
+        System.out.println("  Created " + occurrences.size() + " occurrence(s) of '" + title + "'.");
+    }
+
+    // ── 3. View All Tasks ───────────────────────────────────
 
     private static void viewAllTasks() {
         List<Task> all = system.getAllTasks();
@@ -107,7 +225,7 @@ public class Main {
         System.out.println(system.formatTaskTable(all));
     }
 
-    // ── 3. Search Tasks ─────────────────────────────────────
+    // ── 4. Search Tasks ─────────────────────────────────────
 
     private static void searchTasks() {
         System.out.println("\n-- Task Search --");
@@ -137,11 +255,14 @@ public class Main {
                 keyword.isEmpty() ? null : keyword,
                 status, fromDate, toDate, dayOfWeek);
 
+        lastSearchResults = new ArrayList<>(results);
+
         System.out.println("\n  Found " + results.size() + " task(s):\n");
         System.out.println(system.formatTaskTable(results));
+        System.out.println("  Tip: use 'Export Tasks to CSV' and choose option 2 to export this result set.");
     }
 
-    // ── 4. Import CSV ───────────────────────────────────────
+    // ── 5. Import CSV ───────────────────────────────────────
 
     private static void importCsv() {
         System.out.print("\n  Enter CSV file path: ");
@@ -158,7 +279,7 @@ public class Main {
         }
     }
 
-    // ── 5. Export CSV ───────────────────────────────────────
+    // ── 6. Export CSV ───────────────────────────────────────
 
     private static void exportCsv() {
         if (system.getTasks().isEmpty()) {
@@ -166,21 +287,43 @@ public class Main {
             return;
         }
 
+        System.out.println("\n-- Export Tasks to CSV --");
+        System.out.println("  1. Export ALL tasks");
+        System.out.println("  2. Export LAST SEARCH RESULTS ("
+                + lastSearchResults.size() + " task(s))");
+        System.out.print("  Select option [1]: ");
+        String option = scanner.nextLine().trim();
+        if (option.isEmpty()) option = "1";
+
+        List<Task> toExport;
+        String suffix;
+        if ("2".equals(option)) {
+            if (lastSearchResults.isEmpty()) {
+                System.out.println("  No search results available. Run a search first.");
+                return;
+            }
+            toExport = lastSearchResults;
+            suffix = "search";
+        } else {
+            toExport = system.getTasks();
+            suffix = "all";
+        }
+
         File exportDir = new File("export_csv");
         if (!exportDir.exists()) exportDir.mkdir();
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String filepath = new File(exportDir, "tasks_export_" + timestamp + ".csv").getPath();
+        String filepath = new File(exportDir, "tasks_export_" + suffix + "_" + timestamp + ".csv").getPath();
 
         try {
-            system.exportToCsv(filepath);
-            System.out.println("  Exported " + system.getTasks().size() + " task(s) to '" + filepath + "'.");
+            system.exportTasksToCsv(toExport, filepath);
+            System.out.println("  Exported " + toExport.size() + " task(s) to '" + filepath + "'.");
         } catch (IOException e) {
             System.out.println("  Error: " + e.getMessage());
         }
     }
 
-    // ── 6. Export iCal ──────────────────────────────────────
+    // ── 7. Export iCal ──────────────────────────────────────
 
     private static void exportIcal() {
         if (system.getTasks().isEmpty()) {
@@ -253,7 +396,7 @@ public class Main {
         }
     }
 
-    // ── 7. Overloaded Collaborators ─────────────────────────
+    // ── 8. Overloaded Collaborators ─────────────────────────
 
     private static void viewOverloadedCollaborators() {
         System.out.println("\n-- Overloaded Collaborators --\n");

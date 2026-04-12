@@ -36,6 +36,24 @@ public class Task {
         this(title, description, priority, dueDate, TaskStatus.OPEN);
     }
 
+    /**
+     * Reconstruction constructor used by the persistence layer. Preserves the
+     * original creation timestamp and does NOT generate a "Task created" history
+     * entry (the task already existed before it was loaded).
+     */
+    public Task(String title, String description, PriorityLevel priority,
+                LocalDate dueDate, TaskStatus status, LocalDateTime creationDate) {
+        this.title = title;
+        this.description = description;
+        this.priority = priority;
+        this.dueDate = dueDate;
+        this.status = status;
+        this.creationDate = creationDate;
+        this.tags = new ArrayList<>();
+        this.subtasks = new ArrayList<>();
+        this.activityHistory = new ArrayList<>();
+    }
+
     // Getters
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -67,7 +85,15 @@ public class Task {
         activityHistory.add(new ActivityEntry("Assigned to project: " + project.getName()));
     }
 
+    /** OCL invariant: self.subTasks->size() <= 20. */
+    public static final int MAX_SUBTASKS = 20;
+
     public Subtask addSubtask(String title, Collaborator collaborator) {
+        if (subtasks.size() >= MAX_SUBTASKS) {
+            throw new IllegalStateException(
+                    "Task '" + this.title + "' already has the maximum of "
+                    + MAX_SUBTASKS + " subtasks.");
+        }
         Subtask subtask = new Subtask(title, collaborator);
         subtasks.add(subtask);
         activityHistory.add(new ActivityEntry("Subtask added: " + title));
@@ -76,6 +102,14 @@ public class Task {
 
     public Subtask addSubtask(String title) {
         return addSubtask(title, null);
+    }
+
+    /**
+     * Persistence-layer hook: append a previously-persisted subtask without
+     * re-running the OCL size check or emitting a new activity entry.
+     */
+    public void loadSubtask(Subtask subtask) {
+        subtasks.add(subtask);
     }
 
     public void addTag(Tag tag) {

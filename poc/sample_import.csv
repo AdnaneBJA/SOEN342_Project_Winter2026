@@ -13,3 +13,8 @@ Prepare Presentation,Slides for SOEN 342 demo,Create slide deck,open,HIGH,2026-0
 Prepare Presentation,Slides for SOEN 342 demo,Rehearse delivery,open,HIGH,2026-03-22,Course Assignments,University coursework,Bob,Intermediate
 Clean Garage,Organize and clean the garage,,completed,LOW,2026-02-28,Home Renovation,Home improvement tasks,,
 Budget Planning,Monthly budget spreadsheet,,cancelled,MEDIUM,2026-03-01,,,,
+Release v1,Ship the Q2 release,,open,HIGH,2026-04-20,Launch,Q2 product launch,,
+Release v1,Ship the Q2 release,Draft release notes,open,HIGH,2026-04-20,Launch,Q2 product launch,Diana,Senior
+Release v1,Ship the Q2 release,Review pull requests,open,HIGH,2026-04-20,Launch,Q2 product launch,Diana,Senior
+Release v1,Ship the Q2 release,Run database migration,open,HIGH,2026-04-20,Launch,Q2 product launch,Diana,Senior
+Release v1,Ship the Q2 release,Notify users,open,HIGH,2026-04-20,Launch,Q2 product launch,Diana,Senior
