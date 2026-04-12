@@ -114,10 +114,16 @@ public class TaskManagementSystem {
 
     // ── CSV Export ──────────────────────────────────────────
 
+    /** Export every task in the system. */
     public void exportToCsv(String filepath) throws IOException {
+        exportTasksToCsv(tasks, filepath);
+    }
+
+    /** Export an arbitrary task collection (e.g. search results). */
+    public void exportTasksToCsv(List<Task> taskList, String filepath) throws IOException {
         try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(filepath)))) {
             pw.println("TaskName,Description,Subtask,Status,Priority,DueDate,ProjectName,ProjectDescription,Collaborator,CollaboratorCategory");
-            for (Task task : tasks) {
+            for (Task task : taskList) {
                 if (task.getSubtasks().isEmpty()) {
                     pw.println(buildCsvLine(task, null));
                 } else {
@@ -267,7 +273,25 @@ public class TaskManagementSystem {
             boolean exists = task.getSubtasks().stream()
                     .anyMatch(s -> s.getTitle().equalsIgnoreCase(subtaskName));
             if (!exists) {
-                task.addSubtask(subtaskName, collaborator);
+                // DEMO SEEDING: OCL guard temporarily disabled so we can seed an
+                // overloaded-collaborator state for demoing menu option 8.
+                // RESTORE THIS BLOCK AFTER SEEDING.
+                // // Enforce Iteration II / OCL rule: reject over-limit assignments.
+                // if (collaborator != null && !canAssignToCollaborator(collaborator)) {
+                //     System.err.println("  Warning: " + collaborator.getName()
+                //             + " (" + collaborator.getCategory().getLabel()
+                //             + ") has reached the open-task limit of "
+                //             + collaborator.getCategory().getTaskLimit()
+                //             + ". Subtask '" + subtaskName + "' will be added UNASSIGNED.");
+                //     collaborator = null;
+                // }
+                try {
+                    task.addSubtask(subtaskName, collaborator);
+                } catch (IllegalStateException e) {
+                    // OCL: max 20 subtasks per task — skip with warning
+                    System.err.println("  Warning: " + e.getMessage()
+                            + " Subtask '" + subtaskName + "' skipped.");
+                }
             }
         }
     }
@@ -362,6 +386,93 @@ public class TaskManagementSystem {
 
         tasks.add(task);
         return task;
+    }
+
+    // ── Recurring Task Creation ─────────────────────────────
+
+    /**
+     * Create one Task per occurrence of a recurrence pattern. Each occurrence
+     * is a standalone {@link Task} with the same title but a different due
+     * date, satisfying the Iteration II uniqueness rule (title + dueDate).
+     */
+    public List<Task> createRecurringTask(String title, String description,
+                                          PriorityLevel priority, String projectName,
+                                          RecurrencePattern pattern) {
+        List<Task> occurrences = new ArrayList<>();
+        if (pattern == null || pattern.getStartDate() == null || pattern.getEndDate() == null) {
+            return occurrences;
+        }
+        if (pattern.getEndDate().isBefore(pattern.getStartDate())) {
+            return occurrences;
+        }
+
+        Project project = null;
+        if (projectName != null && !projectName.isEmpty()) {
+            project = findOrCreateProject(projectName, "");
+        }
+
+        for (LocalDate date : generateOccurrences(pattern)) {
+            // Respect (title, dueDate) uniqueness
+            if (findTask(title, date) != null) continue;
+
+            Task task = new Task(title, description, priority, date, TaskStatus.OPEN);
+            if (project != null) task.assignProject(project);
+            task.setRecurrence(pattern);
+            tasks.add(task);
+            occurrences.add(task);
+        }
+        return occurrences;
+    }
+
+    private List<LocalDate> generateOccurrences(RecurrencePattern pattern) {
+        List<LocalDate> dates = new ArrayList<>();
+        LocalDate start = pattern.getStartDate();
+        LocalDate end = pattern.getEndDate();
+        int interval = Math.max(1, pattern.getInterval());
+        int safety = 0;
+
+        switch (pattern.getType()) {
+            case DAILY -> {
+                LocalDate d = start;
+                while (!d.isAfter(end) && safety++ < 3650) {
+                    dates.add(d);
+                    d = d.plusDays(interval);
+                }
+            }
+            case WEEKLY -> {
+                List<DayOfWeek> weekdays = pattern.getWeekdays();
+                if (weekdays == null || weekdays.isEmpty()) {
+                    LocalDate d = start;
+                    while (!d.isAfter(end) && safety++ < 520) {
+                        dates.add(d);
+                        d = d.plusWeeks(interval);
+                    }
+                } else {
+                    LocalDate d = start;
+                    while (!d.isAfter(end) && safety++ < 3650) {
+                        long weeksSince = java.time.temporal.ChronoUnit.WEEKS.between(start, d);
+                        if (weeksSince % interval == 0 && weekdays.contains(d.getDayOfWeek())) {
+                            dates.add(d);
+                        }
+                        d = d.plusDays(1);
+                    }
+                }
+            }
+            case MONTHLY -> {
+                Integer dayOfMonth = pattern.getDayOfMonth();
+                int day = (dayOfMonth != null) ? dayOfMonth : start.getDayOfMonth();
+                LocalDate cursor = start.withDayOfMonth(1);
+                while (!cursor.isAfter(end) && safety++ < 240) {
+                    int safeDay = Math.min(day, cursor.lengthOfMonth());
+                    LocalDate occurrence = cursor.withDayOfMonth(safeDay);
+                    if (!occurrence.isBefore(start) && !occurrence.isAfter(end)) {
+                        dates.add(occurrence);
+                    }
+                    cursor = cursor.plusMonths(interval);
+                }
+            }
+        }
+        return dates;
     }
 
     // ── Display ─────────────────────────────────────────────

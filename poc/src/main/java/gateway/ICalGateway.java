@@ -13,26 +13,17 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Gateway Pattern: connects the domain model to iCal (.ics) export.
- * Converts Task objects into RFC 5545 compliant VCALENDAR entries.
- */
+
 public class ICalGateway {
 
     private static final DateTimeFormatter ICS_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter ICS_DATETIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
 
-    /**
-     * Export a single task to an .ics file.
-     */
     public void exportTask(Task task, String filepath) throws IOException {
         exportTasks(List.of(task), filepath);
     }
 
-    /**
-     * Export all tasks in a project to an .ics file.
-     * Only tasks with a due date are included.
-     */
+
     public void exportProjectTasks(List<Task> allTasks, String projectName, String filepath) throws IOException {
         List<Task> filtered = allTasks.stream()
                 .filter(t -> t.getProject() != null
@@ -42,10 +33,6 @@ public class ICalGateway {
         exportTasks(filtered, filepath);
     }
 
-    /**
-     * Export filtered tasks (e.g., open tasks due this week) to an .ics file.
-     * Only tasks with a due date are included.
-     */
     public void exportFilteredTasks(List<Task> tasks, String filepath) throws IOException {
         List<Task> filtered = tasks.stream()
                 .filter(t -> t.getDueDate() != null)
@@ -53,9 +40,6 @@ public class ICalGateway {
         exportTasks(filtered, filepath);
     }
 
-    /**
-     * Core export: writes a list of tasks as VCALENDAR VEVENT entries.
-     */
     public void exportTasks(List<Task> tasks, String filepath) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filepath))) {
             writer.write("BEGIN:VCALENDAR\r\n");

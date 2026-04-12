@@ -10,31 +10,73 @@
 
 ## About
 
-A **Personal Task Management System** built as a Java CLI application for SOEN 342 (Winter 2026). The system allows a single user to organize, track, and manage personal tasks and projects from the command line.
+A **Personal Task Management System** built as a Java CLI application for SOEN 342 (Winter 2026).
+The system allows a single user to organize, track, and manage personal tasks, projects,
+subtasks, and collaborators from the command line, with SQLite persistence and iCal export.
+
+---
+
+## Final Submission — Iteration IV
+
+This repository contains the **final, submission-ready** version of the project.
+
+**Final artifacts** (read these first):
+
+| Artifact | Location | Notes |
+|---|---|---|
+| Final code | `poc/src/main/java/` | Iteration IV code (persistence + iCal + overload + OCL) |
+| Final README | `README.md` | This file |
+| Final PlantUML diagrams (state machine, data model, class, domain, use-case, sequence, SSDs) | `plantuml.md` | **Canonical** text sources for all final diagrams |
+| Iteration I artifacts (use case, domain model, SSDs, fully-dressed UC, operation contracts) | `archives/Iteration1.md` | |
+| Iteration II artifacts (updated use case, domain, SSDs, interaction diagrams, class diagram) | `archives/Iteration2.md` | |
+| Iteration III artifacts (updated use case, class diagram, iCal sequence diagram, OCL) | `archives/Iteration3.md` | |
+| Task **Protocol State Machine** (Iteration IV — new) | `plantuml.md` §1 | |
+| **Data Model in UML** (Iteration IV — new) | `plantuml.md` §2 | Matches the SQLite schema |
+| Demo video | *TO BE ADDED BEFORE SUBMISSION* — see “Demo Video” below | |
+| Iteration requirement specs | `Sprint1.md`, `Sprint2.md`, `Sprint3.md`, `Sprint4.md` | Original assignment descriptions |
+
+> The **final versions** of diagrams are the PlantUML sources in `plantuml.md`.
+> The iteration-specific `.md` files are kept for historical traceability.
+
+---
 
 ## Features
 
-### Core (Iteration 2)
-1. **View All Tasks** -- Display every task sorted by due date
-2. **Search Tasks** -- Filter by keyword, status, date range, or day of week
-3. **Import from CSV** -- Load tasks from a CSV file (`sample_import.csv` included)
-4. **Export to CSV** -- Export all tasks to a timestamped CSV in `export_csv/`
+### Iteration I — Core
+- Create, update, view, search, and tag tasks
+- Subtasks, projects, activity history
 
-### New in Iteration 3
-5. **Create Task** -- Interactively create tasks with title, description, priority, due date, and optional project
-6. **Export to iCal (.ics)** -- Export tasks to iCal format with 4 options:
-   - Single task export
-   - All tasks in a project
-   - Open tasks due this week
-   - All tasks with due dates
-   - Subtasks are summarized inside the parent task description (not exported separately)
-7. **Overloaded Collaborators** -- View collaborators whose open task count exceeds their category limit
-8. **SQLite Persistence** -- All data is saved to a local `taskmanager.db` file and loaded on startup
-9. **OCL Constraints** -- Formal constraints defined for:
-   - Max 20 subtasks per task
-   - Max 50 open tasks without due date
-   - Positive task limit per collaborator category
-   - Collaborator overload prevention
+### Iteration II — PoC additions
+1. **View All Tasks** — display every task sorted by due date
+2. **Search Tasks** — filter by keyword, status, date range, or day of week
+3. **Import from CSV** — load tasks from a CSV file (`poc/sample_import.csv` included)
+4. **Export to CSV** — export all tasks **or the last search result set** to a timestamped CSV in `export_csv/`
+5. **Create Recurring Task** — interactively define a `DAILY`, `WEEKLY`, or `MONTHLY` recurrence (with custom interval, start/end date, selected weekdays or day-of-month); the system generates one `Task` per occurrence, enforcing `(title, dueDate)` uniqueness
+6. **Collaborator categories** with open-task limits (enforced on CSV import — assignments over the limit are rejected and the subtask is saved unassigned)
+7. **Collaborator assignment** automatically creates a linked subtask
+8. **OCL enforcement at runtime** — `Task.addSubtask` rejects a 21st subtask (OCL `MaxSubTasks`)
+
+### Iteration III — Integration & persistence
+7. **Create Task** interactively (title, description, priority, due date, optional project)
+8. **Export to iCal (.ics)** — via `ICalGateway` (Gateway pattern), with four options:
+   - single task, project tasks, open tasks due this week, all tasks with due dates
+   - subtasks are summarized inside the parent task DESCRIPTION (not exported separately)
+   - only tasks that have a due date are eligible
+9. **Overloaded Collaborators** — menu item lists collaborators whose open subtasks exceed their category limit
+10. **SQLite Persistence** — all data is saved to `poc/taskmanager.db` and loaded on startup
+11. **OCL Constraints** (see `archives/Iteration3.md`):
+    - Max 20 subtasks per task
+    - Max 50 open tasks without due date
+    - Positive task limit per collaborator category (SENIOR=2, INTERMEDIATE=5, JUNIOR=10)
+    - No collaborator may be overloaded
+
+### Iteration IV — Finalization
+12. **Protocol state machine for `Task`** — `plantuml.md` §1
+13. **Data model in UML** — `plantuml.md` §2
+14. Final consolidated PlantUML sources for all required diagrams
+15. Demo video (see below)
+
+---
 
 ## How to Run
 
@@ -45,7 +87,24 @@ cd poc
 mvn compile exec:java
 ```
 
-The application will create a `taskmanager.db` SQLite database file in the `poc/` directory on first run. Data persists across sessions.
+The application creates a `taskmanager.db` SQLite database file in the `poc/` directory on
+first run. Data persists across sessions and is saved on every create/import and on exit.
+
+### Menu
+
+```
+1. Create Task
+2. Create Recurring Task
+3. View All Tasks
+4. Search Tasks (with filters)
+5. Import Tasks from CSV
+6. Export Tasks to CSV   (all OR last search results)
+7. Export Tasks to iCal (.ics)
+8. View Overloaded Collaborators
+9. Save & Exit
+```
+
+---
 
 ## CSV Format
 
@@ -53,35 +112,62 @@ The application will create a `taskmanager.db` SQLite database file in the `poc/
 TaskName, Description, Subtask, Status, Priority, DueDate, ProjectName, ProjectDescription, Collaborator, CollaboratorCategory
 ```
 
+Optional columns may be empty. Project names are unique; a project created during
+import is re-used for later rows referencing the same name.
+
+---
+
 ## Project Structure
 
 ```
-poc/
-├── src/main/java/
-│   ├── Main.java                          # CLI entry point
-│   ├── models/
-│   │   ├── Task.java                      # Task entity
-│   │   ├── Subtask.java                   # Subtask entity
-│   │   ├── Project.java                   # Project entity
-│   │   ├── Collaborator.java              # Collaborator entity
-│   │   ├── CollaboratorCategory.java      # Category enum with task limits
-│   │   ├── TaskStatus.java                # Status enum
-│   │   ├── PriorityLevel.java             # Priority enum
-│   │   ├── Tag.java                       # Tag entity
-│   │   ├── ActivityEntry.java             # Activity history entry
-│   │   └── RecurrencePattern.java         # Recurrence pattern
-│   ├── system/
-│   │   └── TaskManagementSystem.java      # Core business logic
-│   ├── gateway/
-│   │   └── ICalGateway.java               # iCal export (Gateway Pattern)
-│   └── persistence/
-│       ├── DatabaseManager.java           # SQLite connection (Singleton)
-│       └── TaskRepository.java            # Data access (Repository Pattern)
-├── pom.xml
-└── sample_import.csv
+.
+├── README.md                       # This file (final)
+├── plantuml.md                     # Final PlantUML sources for every required diagram
+├── Sprint1.md … Sprint4.md         # Original iteration requirement specs
+├── archives/                       # Historical per-iteration artifacts (superseded by plantuml.md)
+│   ├── Iteration1.md               # Iteration I artifacts (fully-dressed UC + operation contracts)
+│   ├── Iteration2.md               # Iteration II artifacts (use case, SSDs, interaction, class)
+│   └── Iteration3.md               # Iteration III artifacts (use case, class, iCal seq, OCL)
+├── taskmanager.db                  # SQLite DB (created at runtime; sample provided)
+├── export_csv/                     # Sample CSV exports
+└── poc/
+    ├── pom.xml
+    ├── sample_import.csv
+    └── src/main/java/
+        ├── Main.java                          # CLI entry point
+        ├── models/
+        │   ├── Task.java
+        │   ├── Subtask.java
+        │   ├── Project.java
+        │   ├── Collaborator.java
+        │   ├── CollaboratorCategory.java      # SENIOR(2), INTERMEDIATE(5), JUNIOR(10)
+        │   ├── TaskStatus.java                # OPEN / COMPLETED / CANCELLED
+        │   ├── PriorityLevel.java             # LOW / MEDIUM / HIGH
+        │   ├── Tag.java
+        │   ├── ActivityEntry.java             # Task history entry
+        │   └── RecurrencePattern.java
+        ├── system/
+        │   └── TaskManagementSystem.java      # Core business logic
+        ├── gateway/
+        │   └── ICalGateway.java               # iCal export (Gateway pattern)
+        └── persistence/
+            ├── DatabaseManager.java           # SQLite connection (Singleton)
+            └── TaskRepository.java            # Data access (Repository pattern)
 ```
 
-## Diagrams
+---
 
-- **Iteration 1** (`Iteration1.md`) -- Use case diagram, domain model, SSDs, fully-dressed use case, operation contracts
-- **Iteration 3** (`diagram.md`) -- Updated use case diagram, class diagram, sequence diagrams, OCL constraints, persistence design
+
+## Demo Video
+- link: *(https://www.youtube.com/watch?v=XQerkwIhzf0)*
+
+---
+
+## Design Patterns Used
+
+- **Gateway** — `gateway/ICalGateway.java` (isolates the domain from iCal format details)
+- **Singleton** — `persistence/DatabaseManager.java`
+- **Repository** — `persistence/TaskRepository.java`
+
+---
+

@@ -163,8 +163,15 @@ public class TaskRepository {
                 String dueDateStr = rs.getString("due_date");
                 LocalDate dueDate = dueDateStr != null ? LocalDate.parse(dueDateStr) : null;
 
+                LocalDateTime creationDate;
+                try {
+                    creationDate = LocalDateTime.parse(rs.getString("creation_date"));
+                } catch (Exception e) {
+                    creationDate = LocalDateTime.now();
+                }
+
                 Task task = new Task(rs.getString("title"), rs.getString("description"),
-                        priority, dueDate, status);
+                        priority, dueDate, status, creationDate);
 
                 // Assign project
                 String projectName = rs.getString("project_name");
@@ -202,8 +209,9 @@ public class TaskRepository {
                     CollaboratorCategory cat = CollaboratorCategory.valueOf(rs.getString("collab_cat"));
                     collab = new Collaborator(collabName, cat);
                 }
-                Subtask st = task.addSubtask(rs.getString("title"), collab);
+                Subtask st = new Subtask(rs.getString("title"), collab);
                 st.setStatus(TaskStatus.fromString(rs.getString("status")));
+                task.loadSubtask(st);
             }
         }
     }
