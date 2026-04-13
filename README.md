@@ -2,11 +2,11 @@
 
 ## Team Credentials
 
-| Name |
-|------|
-| Adnane Bejja |
-| Yanis Djeridi |
-| Dylan Moos |
+| Name          | GitHub Username |
+|---------------|-----------------|
+| Adnane Bejja  | AdnaneBJA       |
+| Yanis Djeridi | dmoos42         |
+| Dylan Moos    | Yanisdje        |
 
 ## About
 
